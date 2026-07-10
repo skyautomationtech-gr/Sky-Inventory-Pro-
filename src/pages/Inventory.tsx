@@ -754,16 +754,16 @@ export const InventoryPage: React.FC = () => {
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={handleExportCSV}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition-all cursor-pointer min-h-[44px]"
           >
-            <Download className="h-3.5 w-3.5" />
+            <Download className="h-4 w-4" />
             Export CSV
           </button>
           <button
             onClick={handlePrint}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition-all cursor-pointer min-h-[44px]"
           >
-            <Printer className="h-3.5 w-3.5" />
+            <Printer className="h-4 w-4" />
             Print Report
           </button>
           
@@ -771,23 +771,23 @@ export const InventoryPage: React.FC = () => {
             <>
               <button
                 onClick={() => setIsStockInOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/10 transition-all cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/10 transition-all cursor-pointer min-h-[44px]"
               >
-                <ArrowDownLeft className="h-3.5 w-3.5" />
+                <ArrowDownLeft className="h-4 w-4" />
                 Inbound (Stock In)
               </button>
               <button
                 onClick={() => setIsStockOutOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-rose-600 hover:bg-rose-700 text-white shadow-md shadow-rose-500/10 transition-all cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold rounded-lg bg-rose-600 hover:bg-rose-700 text-white shadow-md shadow-rose-500/10 transition-all cursor-pointer min-h-[44px]"
               >
-                <ArrowUpRight className="h-3.5 w-3.5" />
+                <ArrowUpRight className="h-4 w-4" />
                 Outbound (Stock Out)
               </button>
               <button
                 onClick={() => setIsAdjustmentOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/10 transition-all cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/10 transition-all cursor-pointer min-h-[44px]"
               >
-                <Settings className="h-3.5 w-3.5" />
+                <Settings className="h-4 w-4" />
                 Adjustment Override
               </button>
             </>
@@ -840,10 +840,10 @@ export const InventoryPage: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-zinc-200/60 dark:border-zinc-800/60 pb-1">
         
         {/* Navigation Tabs */}
-        <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center gap-1">
           <button
             onClick={() => setActiveTab('stocks')}
-            className={`px-4 py-2 text-xs font-bold transition-all rounded-t-xl border-b-2 cursor-pointer ${
+            className={`px-4 py-2 text-xs font-bold transition-all rounded-t-xl border-b-2 cursor-pointer min-h-[44px] ${
               activeTab === 'stocks'
                 ? 'border-blue-600 text-blue-600 dark:text-blue-400'
                 : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
@@ -853,7 +853,7 @@ export const InventoryPage: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('transactions')}
-            className={`px-4 py-2 text-xs font-bold transition-all rounded-t-xl border-b-2 cursor-pointer ${
+            className={`px-4 py-2 text-xs font-bold transition-all rounded-t-xl border-b-2 cursor-pointer min-h-[44px] ${
               activeTab === 'transactions'
                 ? 'border-blue-600 text-blue-600 dark:text-blue-400'
                 : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
@@ -863,7 +863,7 @@ export const InventoryPage: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('adjustments')}
-            className={`px-4 py-2 text-xs font-bold transition-all rounded-t-xl border-b-2 cursor-pointer ${
+            className={`px-4 py-2 text-xs font-bold transition-all rounded-t-xl border-b-2 cursor-pointer min-h-[44px] ${
               activeTab === 'adjustments'
                 ? 'border-blue-600 text-blue-600 dark:text-blue-400'
                 : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'

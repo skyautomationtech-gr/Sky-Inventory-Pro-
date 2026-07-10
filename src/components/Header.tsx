@@ -144,23 +144,23 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* High Fidelity Notification Dropdown */}
           {showNotificationMenu && (
-            <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl py-2 z-50 overflow-hidden">
+            <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-96 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl py-2 z-50 overflow-hidden">
               <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                 <span className="text-xs font-semibold text-slate-900 dark:text-white">System Events</span>
                 <span className="text-[10px] font-medium text-blue-600 dark:text-blue-400 cursor-pointer hover:underline">Mark all read</span>
               </div>
-              <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+              <div className="max-h-72 overflow-y-auto divide-y divide-zinc-100 dark:divide-zinc-800">
                 {notifications.map((n) => {
                   const IconComp = n.icon;
                   return (
-                    <div key={n.id} className="p-4 flex gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                    <div key={n.id} className="p-4 flex gap-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors">
                       <div className={`p-1.5 rounded-lg flex-shrink-0 h-8 w-8 flex items-center justify-center ${n.iconColor}`}>
                         <IconComp className="h-4 w-4" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate">{n.title}</p>
-                        <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">{n.desc}</p>
-                        <p className="text-[9px] text-slate-400 dark:text-slate-500 mt-1 font-medium">{n.time}</p>
+                        <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 truncate">{n.title}</p>
+                        <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5 leading-relaxed">{n.desc}</p>
+                        <p className="text-[9px] text-zinc-400 dark:text-zinc-500 mt-1 font-medium">{n.time}</p>
                       </div>
                     </div>
                   );
