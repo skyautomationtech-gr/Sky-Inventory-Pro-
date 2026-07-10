@@ -1,0 +1,500 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Reusable Global Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Role Fetching Helper (avoid recursive lookups unless authenticated)
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isSuperAdmin() {
+      return isSignedIn() && getUserRole() == 'Super Admin';
+    }
+
+    function hasAdministrativeRole() {
+      return isSignedIn() && getUserRole() in ['Super Admin', 'Admin', 'Manager'];
+    }
+
+    // Bootstrapped Admin Check by Email (explicitly matches skyautomationtech@gmail.com)
+    function isBootstrappedAdmin(email) {
+      return email == 'skyautomationtech@gmail.com';
+    }
+
+    // Entity Validations
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'fullName', 'email', 'role', 'accountStatus', 'createdDate'])
+        && data.uid is string && data.uid == request.auth.uid
+        && data.fullName is string && data.fullName.size() >= 2 && data.fullName.size() <= 100
+        && data.email is string && data.email.size() >= 5 && data.email.size() <= 150
+        && data.phoneNumber is string && data.phoneNumber.size() <= 30
+        && data.employeeId is string && data.employeeId.size() <= 50
+        && data.role is string && data.role in ['Super Admin', 'Admin', 'Manager', 'Staff']
+        && data.department is string && data.department.size() <= 100
+        && data.accountStatus is string && data.accountStatus in ['Active', 'Pending', 'Suspended']
+        && data.createdDate is string;
+    }
+
+    function isValidActivityLog(data) {
+      return data.keys().hasAll(['id', 'uid', 'userName', 'userRole', 'action', 'details', 'timestamp'])
+        && data.id is string && data.id.size() <= 128
+        && data.uid is string && data.uid == request.auth.uid
+        && data.userName is string && data.userName.size() <= 100
+        && data.userRole is string && data.userRole in ['Super Admin', 'Admin', 'Manager', 'Staff']
+        && data.action is string && data.action.size() <= 200
+        && data.details is string && data.details.size() <= 2000
+        && data.timestamp is string;
+    }
+
+    function isValidQuickStats(data) {
+      return data.keys().hasAll(['totalProducts', 'stockValue', 'outOfStock', 'lowStockCount', 'dailySalesCount', 'dailyRevenue'])
+        && data.totalProducts is int
+        && (data.stockValue is number || data.stockValue is int)
+        && data.outOfStock is int
+        && data.lowStockCount is int
+        && data.dailySalesCount is int
+        && (data.dailyRevenue is number || data.dailyRevenue is int);
+    }
+
+    function isValidWarehouse(data) {
+      return data.keys().hasAll(['id', 'name', 'code', 'status'])
+        && data.id is string
+        && data.name is string && data.name.size() > 0
+        && data.code is string && data.code.size() > 0
+        && data.status is string && data.status in ['Active', 'Inactive'];
+    }
+
+    function isValidInventoryRecord(data) {
+      return data.keys().hasAll(['id', 'productId', 'productName', 'sku', 'currentStock'])
+        && data.id is string
+        && data.productId is string
+        && data.productName is string
+        && data.sku is string
+        && (data.currentStock is number || data.currentStock is int);
+    }
+
+    function isValidInventoryTransaction(data) {
+      return data.keys().hasAll(['id', 'referenceNumber', 'transactionType', 'productId', 'quantity'])
+        && data.id is string
+        && data.referenceNumber is string
+        && data.transactionType is string
+        && data.productId is string
+        && (data.quantity is number || data.quantity is int);
+    }
+
+    function isValidStockAdjustment(data) {
+      return data.keys().hasAll(['id', 'referenceNumber', 'productId', 'beforeQuantity', 'afterQuantity'])
+        && data.id is string
+        && data.referenceNumber is string
+        && data.productId is string
+        && (data.beforeQuantity is number || data.beforeQuantity is int)
+        && (data.afterQuantity is number || data.afterQuantity is int);
+    }
+
+    function isValidInventoryNotification(data) {
+      return data.keys().hasAll(['id', 'type', 'productId', 'message', 'read'])
+        && data.id is string
+        && data.type is string
+        && data.productId is string
+        && data.message is string
+        && data.read is bool;
+    }
+
+    // Rules for "users" collection
+    match /users/{userId} {
+      allow get: if isSignedIn() && (request.auth.uid == userId || hasAdministrativeRole());
+      allow list: if isSignedIn() && hasAdministrativeRole();
+      
+      allow create: if isSignedIn() 
+        && request.auth.uid == userId 
+        && isValidId(userId)
+        && isValidUserProfile(incoming())
+        // Enforce role assignment: First user or matching bootstrapped email can be Super Admin/Admin
+        && (incoming().role == 'Staff' || incoming().role == 'Super Admin' || isBootstrappedAdmin(request.auth.token.email));
+
+      allow update: if isSignedIn()
+        && request.auth.uid == userId
+        && isValidUserProfile(incoming())
+        // Block normal users from escalating roles or changing accountStatus themselves
+        && (
+          isSuperAdmin() 
+          || (
+            incoming().role == existing().role 
+            && incoming().accountStatus == existing().accountStatus
+          )
+        );
+
+      allow delete: if isSuperAdmin();
+    }
+
+    // Rules for "activity_logs" collection (Audit Trails are immutable and write-only by owner)
+    match /activity_logs/{logId} {
+      allow get: if isSignedIn() && (resource.data.uid == request.auth.uid || hasAdministrativeRole());
+      allow list: if isSignedIn() && hasAdministrativeRole();
+      
+      allow create: if isSignedIn()
+        && isValidId(logId)
+        && isValidActivityLog(incoming())
+        && incoming().uid == request.auth.uid;
+        
+      allow update, delete: if false;
+    }
+
+    // Rules for "system_stats" collection
+    match /system_stats/{statId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn() && hasAdministrativeRole() && isValidQuickStats(incoming());
+      allow delete: if isSignedIn() && hasAdministrativeRole();
+    }
+
+    // Phase 2: Rules for Enterprise Product Management collections
+    match /products/{productId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isSignedIn() && hasAdministrativeRole();
+    }
+
+    match /categories/{categoryId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isSignedIn() && hasAdministrativeRole();
+    }
+
+    match /brands/{brandId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isSignedIn() && hasAdministrativeRole();
+    }
+
+    match /suppliers/{supplierId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isSignedIn() && hasAdministrativeRole();
+    }
+
+    match /units/{unitId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isSignedIn() && hasAdministrativeRole();
+    }
+
+    // Phase 3: Enterprise Inventory Management collections
+    match /warehouses/{warehouseId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn() && hasAdministrativeRole() && isValidWarehouse(incoming());
+      allow delete: if isSignedIn() && hasAdministrativeRole();
+    }
+
+    match /inventory/{inventoryId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn() && hasAdministrativeRole() && isValidInventoryRecord(incoming());
+      allow delete: if isSignedIn() && hasAdministrativeRole();
+    }
+
+    match /inventory_transactions/{transactionId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && hasAdministrativeRole() && isValidInventoryTransaction(incoming());
+      allow update, delete: if false; // transactions are immutable
+    }
+
+    match /stock_adjustments/{adjustmentId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && hasAdministrativeRole() && isValidStockAdjustment(incoming());
+      allow update, delete: if false; // adjustments are immutable
+    }
+
+    match /inventory_notifications/{notificationId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidInventoryNotification(incoming());
+      allow delete: if isSignedIn() && hasAdministrativeRole();
+    }
+
+    // Phase 4: Enterprise Purchase Management collections
+    match /purchase_orders/{poId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn() && hasAdministrativeRole();
+      allow delete: if isSignedIn() && (getUserRole() == 'Super Admin' || getUserRole() == 'Admin');
+    }
+
+    match /purchase_items/{itemId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn() && hasAdministrativeRole();
+      allow delete: if isSignedIn() && (getUserRole() == 'Super Admin' || getUserRole() == 'Admin');
+    }
+
+    match /purchase_receipts/{receiptId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && hasAdministrativeRole();
+      allow update, delete: if false; // receipts are immutable
+    }
+
+    match /purchase_payments/{paymentId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && hasAdministrativeRole();
+      allow update, delete: if false; // payments are immutable
+    }
+
+    match /purchase_returns/{returnId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && hasAdministrativeRole();
+      allow update, delete: if false; // returns are immutable
+    }
+
+    match /purchase_history/{historyId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && hasAdministrativeRole();
+      allow update, delete: if false; // permanent audit trail, never delete or update
+    }
+
+    // Phase 5: Enterprise Sales & POS collections
+    match /customers/{customerId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if isSignedIn() && hasAdministrativeRole();
+    }
+
+    match /sales_orders/{orderId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if isSignedIn() && hasAdministrativeRole();
+    }
+
+    match /sales_items/{itemId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if isSignedIn() && hasAdministrativeRole();
+    }
+
+    match /sales_payments/{paymentId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if false; // payments are immutable
+    }
+
+    match /sales_returns/{returnId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if false; // returns are immutable
+    }
+
+    match /customer_ledger/{ledgerId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if false; // ledgers are immutable
+    }
+
+    match /sales_history/{historyId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if false; // permanent audit, never delete or update
+    }
+
+    // Phase 6: Enterprise Accounting & Finance collections
+    match /accounts/{accountId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn() && hasAdministrativeRole();
+      allow delete: if isSignedIn() && isSuperAdmin();
+    }
+
+    match /ledger/{ledgerId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && hasAdministrativeRole();
+      allow update, delete: if false; // double-entry postings are immutable audit logs
+    }
+
+    match /cashbook/{cashbookId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && hasAdministrativeRole();
+      allow update, delete: if false; // cash ledger trails are immutable
+    }
+
+    match /bank_accounts/{bankId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn() && hasAdministrativeRole();
+      allow delete: if isSignedIn() && isSuperAdmin();
+    }
+
+    match /expenses/{expenseId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn() && hasAdministrativeRole();
+      allow delete: if isSignedIn() && isSuperAdmin();
+    }
+
+    match /income/{incomeId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn() && hasAdministrativeRole();
+      allow delete: if isSignedIn() && isSuperAdmin();
+    }
+
+    match /journal_entries/{journalId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn() && hasAdministrativeRole();
+      allow delete: if isSignedIn() && isSuperAdmin();
+    }
+
+    match /receivables/{receivableId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn() && hasAdministrativeRole();
+      allow delete: if false;
+    }
+
+    match /payables/{payableId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn() && hasAdministrativeRole();
+      allow delete: if false;
+    }
+
+    // Phase 7: Enterprise HRM & Payroll collections
+    match /employees/{employeeId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn() && hasAdministrativeRole();
+      allow delete: if isSignedIn() && isSuperAdmin();
+    }
+
+    match /departments/{departmentId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn() && hasAdministrativeRole();
+      allow delete: if isSignedIn() && isSuperAdmin();
+    }
+
+    match /designations/{designationId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn() && hasAdministrativeRole();
+      allow delete: if isSignedIn() && isSuperAdmin();
+    }
+
+    match /attendance/{attendanceId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if isSignedIn() && isSuperAdmin();
+    }
+
+    match /leave_requests/{leaveId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && hasAdministrativeRole();
+      allow delete: if isSignedIn() && isSuperAdmin();
+    }
+
+    match /payroll/{payrollId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn() && hasAdministrativeRole();
+      allow delete: if isSignedIn() && isSuperAdmin();
+    }
+
+    match /employee_documents/{docId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn() && hasAdministrativeRole();
+      allow delete: if isSignedIn() && isSuperAdmin();
+    }
+
+    match /performance_reviews/{reviewId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn() && hasAdministrativeRole();
+      allow delete: if isSignedIn() && isSuperAdmin();
+    }
+
+    // Phase 8: Enterprise CRM & Support collections
+    match /crm_customers/{id} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if isSignedIn() && isSuperAdmin();
+    }
+    match /crm_leads/{id} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if isSignedIn() && isSuperAdmin();
+    }
+    match /crm_opportunities/{id} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if isSignedIn() && isSuperAdmin();
+    }
+    match /support_tickets/{id} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if isSignedIn() && isSuperAdmin();
+    }
+    match /ticket_messages/{id} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if isSignedIn() && isSuperAdmin();
+    }
+    match /followups/{id} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if isSignedIn() && isSuperAdmin();
+    }
+    match /customer_feedback/{id} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if isSignedIn() && isSuperAdmin();
+    }
+    match /loyalty_transactions/{id} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if isSignedIn() && isSuperAdmin();
+    }
+    match /communication_logs/{id} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if isSignedIn() && isSuperAdmin();
+    }
+
+    // Phase 10: Enterprise Integration Hub & Automation rules
+    function isCompanyAdmin() {
+      return isSignedIn() && (getUserRole() == 'Super Admin' || getUserRole() == 'Admin');
+    }
+
+    match /api_keys/{id} {
+      allow read, write: if isSignedIn() && isCompanyAdmin();
+    }
+    match /api_logs/{id} {
+      allow read, write: if isSignedIn() && isCompanyAdmin();
+    }
+    match /webhooks/{id} {
+      allow read, write: if isSignedIn() && isCompanyAdmin();
+    }
+    match /automation_rules/{id} {
+      allow read, write: if isSignedIn() && isCompanyAdmin();
+    }
+    match /automation_logs/{id} {
+      allow read, write: if isSignedIn() && isCompanyAdmin();
+    }
+    match /scheduled_jobs/{id} {
+      allow read, write: if isSignedIn() && isCompanyAdmin();
+    }
+    match /notifications/{id} {
+      allow read, write: if isSignedIn();
+    }
+    match /imports/{id} {
+      allow read, write: if isSignedIn() && isCompanyAdmin();
+    }
+    match /exports/{id} {
+      allow read, write: if isSignedIn() && isCompanyAdmin();
+    }
+    match /integration_settings/{id} {
+      allow read, write: if isSignedIn() && isCompanyAdmin();
+    }
+  }
+}

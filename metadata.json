@@ -1,0 +1,6 @@
+{
+  "name": "Sky Inventory Pro",
+  "description": "An enterprise-grade Full-Stack Inventory & Business Management System featuring advanced role-based access control, secure authentication, and a high-performance responsive interface.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

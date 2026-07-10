@@ -1,0 +1,300 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User account and profile information, managed via role-based access control.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "The Firebase Authentication UID." },
+        "fullName": { "type": "string", "description": "The user's full name." },
+        "profilePhoto": { "type": "string", "description": "URL of the user's uploaded profile photo or null." },
+        "email": { "type": "string", "description": "The user's email address." },
+        "phoneNumber": { "type": "string", "description": "The user's contact phone number." },
+        "employeeId": { "type": "string", "description": "Enterprise Employee ID." },
+        "role": { "type": "string", "enum": ["Super Admin", "Admin", "Manager", "Staff"], "description": "Role-based access role." },
+        "department": { "type": "string", "description": "Assigned enterprise department." },
+        "accountStatus": { "type": "string", "enum": ["Active", "Pending", "Suspended"], "description": "Current status of the user account." },
+        "lastLogin": { "type": "string", "description": "ISO timestamp of the user's last login." },
+        "createdDate": { "type": "string", "description": "ISO timestamp of user creation." }
+      },
+      "required": ["uid", "fullName", "email", "role", "accountStatus", "createdDate"]
+    },
+    "ActivityLog": {
+      "title": "ActivityLog",
+      "description": "Log of system audit events.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique log identifier." },
+        "uid": { "type": "string", "description": "The UID of the user who performed the action." },
+        "userName": { "type": "string", "description": "Display name of the active user." },
+        "userRole": { "type": "string", "description": "Role of the active user." },
+        "action": { "type": "string", "description": "Short description of the action taken." },
+        "details": { "type": "string", "description": "Detailed notes or payload about the action." },
+        "timestamp": { "type": "string", "description": "ISO timestamp of when the event occurred." }
+      },
+      "required": ["id", "uid", "userName", "userRole", "action", "details", "timestamp"]
+    },
+    "QuickStats": {
+      "title": "QuickStats",
+      "description": "Aggregated live system statistics.",
+      "type": "object",
+      "properties": {
+        "totalProducts": { "type": "integer", "description": "Total count of products registered." },
+        "stockValue": { "type": "number", "description": "Total value of items in stock." },
+        "outOfStock": { "type": "integer", "description": "Count of products currently out of stock." },
+        "lowStockCount": { "type": "integer", "description": "Count of products running low in stock." },
+        "dailySalesCount": { "type": "integer", "description": "Count of sales made today." },
+        "dailyRevenue": { "type": "number", "description": "Sum of today's sales revenue." }
+      },
+      "required": ["totalProducts", "stockValue", "outOfStock", "lowStockCount", "dailySalesCount", "dailyRevenue"]
+    },
+    "Warehouse": {
+      "title": "Warehouse",
+      "description": "Enterprise warehouse details.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "code": { "type": "string" },
+        "address": { "type": "string" },
+        "manager": { "type": "string" },
+        "status": { "type": "string", "enum": ["Active", "Inactive"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["id", "name", "code", "status"]
+    },
+    "InventoryRecord": {
+      "title": "InventoryRecord",
+      "description": "Detailed multi-stock quantities and thresholds for an enterprise product.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "productId": { "type": "string" },
+        "productName": { "type": "string" },
+        "sku": { "type": "string" },
+        "barcode": { "type": "string" },
+        "category": { "type": "string" },
+        "supplier": { "type": "string" },
+        "currentStock": { "type": "number" },
+        "availableStock": { "type": "number" },
+        "reservedStock": { "type": "number" },
+        "damagedStock": { "type": "number" },
+        "returnedStock": { "type": "number" },
+        "minStockLevel": { "type": "number" },
+        "maxStockLevel: { "type": "number" },
+        "reorderLevel": { "type": "number" },
+        "safetyStock": { "type": "number" },
+        "lastStockUpdate": { "type": "string" },
+        "stockStatus": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["id", "productId", "productName", "sku", "currentStock"]
+    },
+    "InventoryTransaction": {
+      "title": "InventoryTransaction",
+      "description": "Log of individual inventory transactions (Stock In / Stock Out).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "referenceNumber": { "type": "string" },
+        "transactionType": { "type": "string" },
+        "productId": { "type": "string" },
+        "productName": { "type": "string" },
+        "sku": { "type": "string" },
+        "barcode": { "type": "string" },
+        "quantity": { "type": "number" },
+        "previousQuantity": { "type": "number" },
+        "newQuantity": { "type": "number" },
+        "difference": { "type": "number" },
+        "warehouseId": { "type": "string" },
+        "warehouseName": { "type": "string" },
+        "requestedBy": { "type": "string" },
+        "approvedBy": { "type": "string" },
+        "remarks": { "type": "string" },
+        "user": { "type": "string" },
+        "userId": { "type": "string" },
+        "role": { "type": "string" },
+        "date": { "type": "string" },
+        "time": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "referenceNumber", "transactionType", "productId", "quantity"]
+    },
+    "StockAdjustment": {
+      "title": "StockAdjustment",
+      "description": "Record of manual inventory adjustments.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "referenceNumber": { "type": "string" },
+        "productId": { "type": "string" },
+        "productName": { "type": "string" },
+        "sku": { "type": "string" },
+        "reason": { "type": "string" },
+        "approval": { "type": "string" },
+        "notes": { "type": "string" },
+        "beforeQuantity": { "type": "number" },
+        "afterQuantity": { "type": "number" },
+        "difference": { "type": "number" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "referenceNumber", "productId", "beforeQuantity", "afterQuantity"]
+    },
+    "InventoryNotification": {
+      "title": "InventoryNotification",
+      "description": "Inventory alerts and warnings.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "productId": { "type": "string" },
+        "productName": { "type": "string" },
+        "sku": { "type": "string" },
+        "message": { "type": "string" },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "type", "productId", "message", "read"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Individual user profiles stored at their UID path."
+    },
+    "/activity_logs/{logId}": {
+      "schema": "ActivityLog",
+      "description": "System-wide immutable activity logs."
+    },
+    "/system_stats/{statDocId}": {
+      "schema": "QuickStats",
+      "description": "Live stats documents, e.g. global."
+    },
+    "/warehouses/{warehouseId}": {
+      "schema": "Warehouse",
+      "description": "Registered storage facilities."
+    },
+    "/inventory/{inventoryId}": {
+      "schema": "InventoryRecord",
+      "description": "Consolidated and localized stock metrics."
+    },
+    "/inventory_transactions/{transactionId}": {
+      "schema": "InventoryTransaction",
+      "description": "Full audit log of stock movements."
+    },
+    "/stock_adjustments/{adjustmentId}": {
+      "schema": "StockAdjustment",
+      "description": "Manual override records."
+    },
+    "/inventory_notifications/{notificationId}": {
+      "schema": "InventoryNotification",
+      "description": "Stock alerts and system notifications."
+    },
+    "/customers/{customerId}": {
+      "description": "Registered CRM customers with credit limit and loyalty tracking."
+    },
+    "/sales_orders/{orderId}": {
+      "description": "Sales Orders containing overall invoice details, totals, and inline items."
+    },
+    "/sales_items/{itemId}": {
+      "description": "Granular, searchable line items for every sales order."
+    },
+    "/sales_payments/{paymentId}": {
+      "description": "Payments registered against Sales Orders (including split payments)."
+    },
+    "/sales_returns/{returnId}": {
+      "description": "Product return requests, refund amounts, and stock restoration audit trails."
+    },
+    "/customer_ledger/{ledgerId}": {
+      "description": "Ledger of debits, credits, and balance tracking per customer."
+    },
+    "/sales_history/{historyId}": {
+      "description": "Sales activity stream and RBAC-controlled operational audit logs."
+    },
+    "/accounts/{accountId}": {
+      "description": "Chart of accounts and general ledger codes."
+    },
+    "/ledger/{ledgerId}": {
+      "description": "Double-entry general ledger transactions database."
+    },
+    "/cashbook/{cashbookId}": {
+      "description": "Daily running cash book ledger."
+    },
+    "/bank_accounts/{bankId}": {
+      "description": "Corporate bank accounts and cash reserves."
+    },
+    "/expenses/{expenseId}": {
+      "description": "Corporate operational expenses and category bills."
+    },
+    "/income/{incomeId}": {
+      "description": "Non-sales auxiliary income streams."
+    },
+    "/journal_entries/{journalId}": {
+      "description": "Manual journal adjustment entries."
+    },
+    "/receivables/{receivableId}": {
+      "description": "Accounts receivables aging and client outstanding tracker."
+    },
+    "/payables/{payableId}": {
+      "description": "Accounts payables schedules and vendor liability tracker."
+    },
+    "/employees/{employeeId}": {
+      "description": "Roster details, contact info, salary structure, and status."
+    },
+    "/departments/{departmentId}": {
+      "description": "Corporate departments with assigned managers."
+    },
+    "/designations/{designationId}": {
+      "description": "Official job roles and associated salary grades."
+    },
+    "/attendance/{attendanceId}": {
+      "description": "Daily clock-in/out records, break times, and overtime."
+    },
+    "/leave_requests/{leaveId}": {
+      "description": "Annual, sick, and casual leave requests and workflow approvals."
+    },
+    "/payroll/{payrollId}": {
+      "description": "Monthly payroll generation, tax withholding, and double-entry integration references."
+    },
+    "/employee_documents/{docId}": {
+      "description": "Uploaded compliance contracts, passport copies, and certificates."
+    },
+    "/performance_reviews/{reviewId}": {
+      "description": "Performance ratings, goals, warning records, and rewards."
+    },
+    "/api_keys/{keyId}": {
+      "description": "API keys generated for secure external developer access with role scopes."
+    },
+    "/api_logs/{logId}": {
+      "description": "Immutable request/response transaction logs for security auditing and rate limiting."
+    },
+    "/webhooks/{webhookId}": {
+      "description": "Outgoing/incoming webhook target event configurations."
+    },
+    "/automation_rules/{ruleId}": {
+      "description": "Trigger-Condition-Action automation logic structures."
+    },
+    "/automation_logs/{logId}": {
+      "description": "Execution histories of automated event rule triggers."
+    },
+    "/scheduled_jobs/{jobId}": {
+      "description": "Cron-style daily/weekly scheduled system procedures."
+    },
+    "/notifications/{notificationId}": {
+      "description": "Unified in-app, SMS, and Email alert communication stack."
+    },
+    "/imports/{importId}": {
+      "description": "Historical records of bulk data CSV/Excel importing runs."
+    },
+    "/exports/{exportId}": {
+      "description": "Historical records of data CSV exporting runs."
+    },
+    "/integration_settings/{settingId}": {
+      "description": "Third-party platform service keys and configs (WhatsApp, SMS, SMTP)."
+    }
+  }
+}
