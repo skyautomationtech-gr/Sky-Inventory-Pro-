@@ -353,7 +353,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onQuickActionClick }) => {
         </div>
 
         {/* Right Bento: Audit Log / Recent Activities */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm lg:col-span-2 flex flex-col justify-between h-80">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 sm:p-6 shadow-sm lg:col-span-2 flex flex-col justify-between h-auto lg:h-80">
           <div>
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
@@ -382,7 +382,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onQuickActionClick }) => {
                       <p className="font-semibold text-slate-800 dark:text-slate-200">
                         {log.action}
                       </p>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate max-w-sm sm:max-w-md">
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
                         {log.details}
                       </p>
                       <p className="text-[9px] text-slate-400 mt-1">
@@ -395,7 +395,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onQuickActionClick }) => {
                   </div>
                 ))}
               </div>
-            )}
+            )
+            }
           </div>
 
           <div className="border-t border-slate-100 dark:border-slate-800 pt-3 flex justify-between items-center text-[10px] text-slate-500 dark:text-slate-400">
