@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   Building2, GitBranch, ShieldCheck, ArrowRightLeft, 
-  Activity, Database, FileBarChart, Settings, Cpu, BadgeCheck
+  Activity, Database, FileBarChart, Settings, Cpu, BadgeCheck, Users
 } from 'lucide-react';
 import { CompanyManager } from './CompanyManager';
 import { BranchManager } from './BranchManager';
@@ -12,8 +12,9 @@ import { BackupRecovery } from './BackupRecovery';
 import { ConsolidatedReports } from './ConsolidatedReports';
 import { IntegrationHub } from './IntegrationHub';
 import { ReleaseCenter } from './ReleaseCenter';
+import { AdminReviewView } from '../auth/AdminReviewView';
 
-type AdminTab = 'companies' | 'branches' | 'workflows' | 'transfers' | 'audit' | 'backup' | 'reports' | 'integration' | 'release';
+type AdminTab = 'companies' | 'branches' | 'workflows' | 'transfers' | 'registrations' | 'audit' | 'backup' | 'reports' | 'integration' | 'release';
 
 export const EnterpriseAdministration: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>('companies');
@@ -23,6 +24,7 @@ export const EnterpriseAdministration: React.FC = () => {
     { id: 'branches', name: 'Branch Network', icon: GitBranch },
     { id: 'workflows', name: 'Approval Workflows', icon: ShieldCheck },
     { id: 'transfers', name: 'Stock Transfers', icon: ArrowRightLeft },
+    { id: 'registrations', name: 'Registration Requests', icon: Users },
     { id: 'integration', name: 'Integration Hub', icon: Cpu },
     { id: 'audit', name: 'Security Audit', icon: Activity },
     { id: 'backup', name: 'Backup & Disaster', icon: Database },
@@ -73,6 +75,7 @@ export const EnterpriseAdministration: React.FC = () => {
         {activeTab === 'branches' && <BranchManager />}
         {activeTab === 'workflows' && <ApprovalWorkflows />}
         {activeTab === 'transfers' && <InventoryTransfers />}
+        {activeTab === 'registrations' && <AdminReviewView />}
         {activeTab === 'integration' && <IntegrationHub />}
         {activeTab === 'audit' && <EnterpriseAudit />}
         {activeTab === 'backup' && <BackupRecovery />}

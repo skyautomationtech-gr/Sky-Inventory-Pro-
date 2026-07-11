@@ -152,6 +152,12 @@ service cloud.firestore {
       allow delete: if isSuperAdmin();
     }
 
+    // Rules for "registration_requests" collection
+    match /registration_requests/{requestId} {
+      allow create: if true; // Let unauthenticated users request registration
+      allow get, list, update, delete: if isSignedIn() && hasAdministrativeRole();
+    }
+
     // Rules for "activity_logs" collection (Audit Trails are immutable and write-only by owner)
     match /activity_logs/{logId} {
       allow get: if isSignedIn() && (resource.data.uid == request.auth.uid || hasAdministrativeRole());
