@@ -8,6 +8,7 @@ import {
 import { collection, doc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
+import { sendAutomatedEmail } from '../../utils/emailService';
 
 interface RegistrationViewProps {
   onReturnToLogin: () => void;
@@ -159,6 +160,28 @@ export const RegistrationView: React.FC<RegistrationViewProps> = ({ onReturnToLo
 
       await setDoc(requestRef, newRequest);
       
+      // Dispatch automated EmailJS notice
+      try {
+        await sendAutomatedEmail({
+          recipient: email,
+          subject: "Sky Inventory Pro - Registration Request Received",
+          type: "Registration Received",
+          applicantName: fullName,
+          body: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; background-color: #ffffff;">
+              <h2 style="color: #0f172a;">Application Received</h2>
+              <p>Dear ${fullName},</p>
+              <p>We have successfully received your applicant registration request for the role of <strong>${requestedRole}</strong> in the <strong>${department}</strong> department. Our Super Admin compliance team is currently reviewing your uploaded credentials.</p>
+              <p>Your unique registration request reference is: <strong>${requestRef.id}</strong></p>
+              <p>Best regards,<br/>Sky Automation Tech Compliance Team</p>
+            </div>
+          `,
+          details: `Successfully dispatched onboarding registration received notification to ${email}`
+        });
+      } catch (emailErr) {
+        console.error('Email notification dispatch skipped or failed:', emailErr);
+      }
+
       setIsSuccess(true);
       showNotification('Registration request submitted successfully! Pending Super Admin review.', 'success');
     } catch (err: any) {

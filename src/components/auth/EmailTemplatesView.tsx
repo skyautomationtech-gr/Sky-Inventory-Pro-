@@ -1,19 +1,49 @@
 import React, { useState } from 'react';
-import { Mail, Check, X, ArrowLeft, Send, Copy, AlertCircle, Calendar } from 'lucide-react';
+import { Mail, Check, X, ArrowLeft, Send, Copy, AlertCircle, Calendar, Sparkles } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import emailjs from '@emailjs/browser';
 
 export const EmailTemplatesView: React.FC = () => {
-  const { showNotification } = useState({ showNotification: (msg: string, t: any) => {} }) as any;
+  const { showNotification } = useAuth();
   const [activeTemplate, setActiveTemplate] = useState<'welcome' | 'forgot' | 'received' | 'result'>('welcome');
   const [testEmail, setTestEmail] = useState('you@skyautomationtech.com');
   const [sendingTest, setSendingTest] = useState(false);
 
-  const handleSendTest = () => {
+  const serviceId = (import.meta as any).env.VITE_EMAILJS_SERVICE_ID;
+  const templateId = (import.meta as any).env.VITE_EMAILJS_TEMPLATE_ID;
+  const publicKey = (import.meta as any).env.VITE_EMAILJS_PUBLIC_KEY;
+  const isEmailJSConfigured = !!(serviceId && templateId && publicKey);
+
+  const handleSendTest = async () => {
     setSendingTest(true);
-    setTimeout(() => {
-      setSendingTest(false);
-      alert(`Test notification successfully dispatched to ${testEmail}! Please check mock servers.`);
-    }, 1000);
+    if (isEmailJSConfigured) {
+      try {
+        await emailjs.send(
+          serviceId!,
+          templateId!,
+          {
+            to_email: testEmail,
+            email_to: testEmail,
+            subject: templates[activeTemplate].subject,
+            message_html: templates[activeTemplate].body,
+            message: templates[activeTemplate].body.replace(/<[^>]*>/g, ''), // Plain text version fallback
+          },
+          publicKey!
+        );
+        showNotification(`Real test email successfully dispatched via EmailJS to ${testEmail}!`, 'success');
+      } catch (err: any) {
+        console.error("EmailJS dispatch failed:", err);
+        showNotification(`EmailJS send failed: ${err.text || err.message || err}`, 'error');
+      } finally {
+        setSendingTest(false);
+      }
+    } else {
+      // Sandbox fallback mode
+      setTimeout(() => {
+        setSendingTest(false);
+        showNotification(`Sandbox simulation: Test email successfully dispatched to ${testEmail}!`, 'success');
+      }, 1000);
+    }
   };
 
   const templates = {
@@ -223,6 +253,33 @@ export const EmailTemplatesView: React.FC = () => {
             {sendingTest ? <span className="animate-spin">⏳</span> : <Send className="h-3.5 w-3.5" />}
             <span>Dispatch Test Email</span>
           </button>
+        </div>
+      </div>
+
+      {/* EmailJS Status & Connection Guide */}
+      <div className={`p-4 rounded-2xl border backdrop-blur-xl transition-all ${
+        isEmailJSConfigured 
+          ? 'bg-emerald-950/25 border-emerald-500/20 text-emerald-300' 
+          : 'bg-amber-950/20 border-amber-500/10 text-amber-300/90'
+      }`}>
+        <div className="flex items-start gap-3">
+          <div className={`p-2 rounded-xl border ${
+            isEmailJSConfigured 
+              ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
+              : 'bg-amber-500/10 border-amber-500/20 text-amber-400'
+          }`}>
+            <Sparkles className="h-4 w-4 animate-pulse" />
+          </div>
+          <div className="space-y-1">
+            <h4 className="text-xs font-bold tracking-wide uppercase flex items-center gap-1.5 font-mono">
+              {isEmailJSConfigured ? 'EmailJS Connection: Active' : 'EmailJS Sandbox Simulation Mode'}
+            </h4>
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              {isEmailJSConfigured 
+                ? 'Your EmailJS credentials have been detected! Test notifications will be sent directly to actual email addresses.' 
+                : 'Configure your EmailJS keys in your environment settings (VITE_EMAILJS_SERVICE_ID, VITE_EMAILJS_TEMPLATE_ID, and VITE_EMAILJS_PUBLIC_KEY) to activate live email dispatch. Currently running in safe mock simulation mode.'}
+            </p>
+          </div>
         </div>
       </div>
 

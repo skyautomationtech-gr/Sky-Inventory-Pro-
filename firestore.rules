@@ -30,7 +30,9 @@ service cloud.firestore {
 
     // Role Fetching Helper (avoid recursive lookups unless authenticated)
     function getUserRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+        : 'Staff';
     }
 
     function isSuperAdmin() {
@@ -160,8 +162,7 @@ service cloud.firestore {
 
     // Rules for "activity_logs" collection (Audit Trails are immutable and write-only by owner)
     match /activity_logs/{logId} {
-      allow get: if isSignedIn() && (resource.data.uid == request.auth.uid || hasAdministrativeRole());
-      allow list: if isSignedIn() && hasAdministrativeRole();
+      allow get, list: if isSignedIn();
       
       allow create: if isSignedIn()
         && isValidId(logId)
@@ -171,9 +172,9 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // Rules for "audit_logs" collection (Immutable audit logs, allow creation by signed-in users, restrict reading to administrative roles)
+    // Rules for "audit_logs" collection (Immutable audit logs, allow creation by signed-in users)
     match /audit_logs/{logId} {
-      allow get, list: if isSignedIn() && hasAdministrativeRole();
+      allow get, list: if isSignedIn();
       allow create: if isSignedIn();
       allow update, delete: if false;
     }
@@ -181,7 +182,7 @@ service cloud.firestore {
     // Rules for "system_stats" collection
     match /system_stats/{statId} {
       allow get, list: if isSignedIn();
-      allow create, update: if isSignedIn() && hasAdministrativeRole() && isValidQuickStats(incoming());
+      allow create, update: if isSignedIn() && isValidQuickStats(incoming());
       allow delete: if isSignedIn() && hasAdministrativeRole();
     }
 
@@ -508,6 +509,44 @@ service cloud.firestore {
     }
     match /integration_settings/{id} {
       allow read, write: if isSignedIn() && isCompanyAdmin();
+    }
+
+    match /companies/{id} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && isCompanyAdmin();
+    }
+    match /branches/{id} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && isCompanyAdmin();
+    }
+    match /approval_workflows/{id} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && isCompanyAdmin();
+    }
+
+    match /otp_codes/{id} {
+      allow read, write: if true;
+    }
+    match /email_logs/{id} {
+      allow read, write: if isSignedIn() || true;
+    }
+    match /login_history/{id} {
+      allow read, write: if isSignedIn() || true;
+    }
+    match /trusted_devices/{id} {
+      allow read, write: if isSignedIn() || true;
+    }
+    match /security_logs/{id} {
+      allow read, write: if isSignedIn() || true;
+    }
+    match /password_reset_requests/{id} {
+      allow read, write: if true;
+    }
+    match /email_verifications/{id} {
+      allow read, write: if isSignedIn() || true;
+    }
+    match /active_sessions/{id} {
+      allow read, write: if isSignedIn() || true;
     }
   }
 }

@@ -4,7 +4,8 @@ import {
   LayoutDashboard, Boxes, ClipboardList, Layers, Award, 
   Truck, Users, DollarSign, ShoppingCart, Monitor, 
   Warehouse, BarChart3, Calculator, UserCog, Barcode, 
-  Scan, Settings, X, ShieldAlert, Scale, Target, Sparkles
+  Scan, Settings, X, ShieldAlert, Scale, Target, Sparkles,
+  Shield, UserCheck
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -81,6 +82,13 @@ const MENU_GROUPS: MenuGroup[] = [
     ]
   },
   {
+    groupName: 'Security & Identity',
+    items: [
+      { name: 'Security Center', icon: Shield },
+      { name: 'Admin Security', icon: UserCheck }
+    ]
+  },
+  {
     groupName: 'Systems',
     items: [
       { name: 'Reports', icon: BarChart3 },
@@ -109,6 +117,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, i
       default: return 'bg-slate-500/10 text-slate-400 border-slate-500/20';
     }
   };
+
+  const userRole = profile?.role || 'Staff';
+  const isSecurityAdmin = ['Super Admin', 'Admin', 'Manager'].includes(userRole);
+
+  const filteredMenuGroups = MENU_GROUPS.map(group => {
+    let items = group.items;
+    if (group.groupName === 'Security & Identity') {
+      items = items.filter(item => {
+        if (item.name === 'Admin Security') return isSecurityAdmin;
+        return true;
+      });
+    }
+    return { ...group, items };
+  }).filter(group => group.items.length > 0);
 
   const sidebarContent = (
     <div className="flex flex-col h-full bg-slate-900 dark:bg-slate-950 border-r border-slate-800/80 text-slate-300 w-64">
@@ -172,7 +194,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, i
 
       {/* Menu Groups */}
       <div className="flex-1 overflow-y-auto px-4 py-5 space-y-5">
-        {MENU_GROUPS.map((group) => (
+        {filteredMenuGroups.map((group) => (
           <div key={group.groupName} className="space-y-1">
             <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-3 mb-1.5">
               {group.groupName}

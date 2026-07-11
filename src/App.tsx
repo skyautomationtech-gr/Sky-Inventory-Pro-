@@ -27,6 +27,8 @@ import { CRM } from './pages/CRM';
 import { EnterpriseDashboard } from './components/enterprise/EnterpriseDashboard';
 import { EnterpriseAdministration } from './components/enterprise/EnterpriseAdministration';
 import { AIDashboard } from './components/enterprise/AIDashboard';
+import { SecurityCenter } from './components/auth/SecurityCenter';
+import { AdminSecurity } from './components/auth/AdminSecurity';
 import { Loader2, AlertTriangle, Mail } from 'lucide-react';
 import { testConnection } from './firebase';
 
@@ -213,6 +215,14 @@ const AppContent: React.FC = () => {
               <AIDashboard />
             )}
 
+            {currentView === 'Security Center' && (
+              <SecurityCenter />
+            )}
+
+            {currentView === 'Admin Security' && (
+              <AdminSecurity />
+            )}
+
             {currentView !== 'Dashboard' && 
              currentView !== 'Profile' && 
              currentView !== 'Products' && 
@@ -231,7 +241,9 @@ const AppContent: React.FC = () => {
              currentView !== 'CRM' && 
              currentView !== 'Enterprise Dashboard' && 
              currentView !== 'Enterprise Admin' && 
-             currentView !== 'AI BI Analytics' && (
+             currentView !== 'AI BI Analytics' && 
+             currentView !== 'Security Center' && 
+             currentView !== 'Admin Security' && (
               <ComingSoon moduleName={currentView} />
             )}
 

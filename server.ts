@@ -19,11 +19,15 @@ async function startServer() {
   let adminDb: Firestore | null = null;
   try {
     let projectId = 'ai-studio-f61e4795-6077-497b-9686-702c3002f385';
+    let dbId: string | undefined = undefined;
     const configPath = path.join(process.cwd(), 'firebase-applet-config.json');
     if (fs.existsSync(configPath)) {
       const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
       if (config.projectId) {
         projectId = config.projectId;
+      }
+      if (config.firestoreDatabaseId) {
+        dbId = config.firestoreDatabaseId;
       }
     }
     
@@ -32,8 +36,8 @@ async function startServer() {
         projectId: projectId
       });
     }
-    adminDb = getFirestore();
-    console.log("Firebase Admin SDK initialized successfully with project ID:", projectId);
+    adminDb = dbId ? getFirestore(dbId) : getFirestore();
+    console.log("Firebase Admin SDK initialized successfully with project ID:", projectId, "and database ID:", dbId || "default");
   } catch (error) {
     console.error("Failed to initialize Firebase Admin SDK:", error);
   }
