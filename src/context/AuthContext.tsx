@@ -11,7 +11,7 @@ import {
   browserLocalPersistence, 
   browserSessionPersistence 
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, collection, serverTimestamp, query, where, getDocs, limit } from 'firebase/firestore';
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { UserProfile, UserRole, UserPermissions, ROLE_PERMISSIONS, ActivityLog } from '../types';
 
@@ -546,17 +546,78 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setActionLoading(true);
     setError(null);
     try {
-      await sendPasswordResetEmail(auth, email);
-      showNotification('Password reset link sent! Check your inbox.', 'success');
+      // 1. Validate email format
+      const trimmedEmail = email.trim();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(trimmedEmail)) {
+        throw new Error('Invalid email address format.');
+      }
+
+      // Gather client-side metadata for server audit logging
+      const ua = navigator.userAgent;
+      let browser = "Unknown Browser";
+      let device = "Desktop";
+
+      if (ua.includes("Firefox")) browser = "Firefox";
+      else if (ua.includes("SamsungBrowser")) browser = "Samsung Browser";
+      else if (ua.includes("Opera") || ua.includes("OPR")) browser = "Opera";
+      else if (ua.includes("Edge") || ua.includes("Edg")) browser = "Edge";
+      else if (ua.includes("Chrome")) browser = "Chrome";
+      else if (ua.includes("Safari")) browser = "Safari";
+
+      if (/Mobi|Android|iPhone|iPad/i.test(ua)) {
+        device = "Mobile/Tablet";
+      }
+
+      let ipAddress = "127.0.0.1";
+      let location = "Localhost, Dev";
+
+      try {
+        const response = await fetch('https://ipapi.co/json/').then(r => r.json());
+        if (response && response.ip) {
+          ipAddress = response.ip;
+          location = `${response.city || 'Unknown'}, ${response.country_name || 'Unknown'}`;
+        }
+      } catch (e) {
+        // Non-blocking fallback
+      }
+
+      // 2. Query secure backend API for user existence and server-side logging
+      const checkResponse = await fetch('/api/auth/check-email-exists', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: trimmedEmail,
+          clientDetails: {
+            ipAddress,
+            device,
+            browser,
+            location
+          }
+        })
+      });
+
+      if (!checkResponse.ok) {
+        const errData = await checkResponse.json();
+        throw new Error(errData.error || 'Failed to verify account status.');
+      }
+
+      const { exists } = await checkResponse.json();
+
+      if (!exists) {
+        throw new Error('No account found with this email address.');
+      }
+
+      // 3. Call Firebase sendPasswordResetEmail()
+      await sendPasswordResetEmail(auth, trimmedEmail);
+
+      showNotification('Password reset link has been sent successfully. Please check your inbox and spam folder.', 'success');
     } catch (err: any) {
       console.error(err);
-      let errMsg = 'Failed to send password reset email.';
-      if (err.code === 'auth/user-not-found') {
-        errMsg = 'No account found with this email.';
-      }
+      const errMsg = err.message || 'Failed to send password reset email.';
       setError(errMsg);
       showNotification(errMsg, 'error');
-      throw new Error(errMsg);
+      throw err;
     } finally {
       setActionLoading(false);
     }

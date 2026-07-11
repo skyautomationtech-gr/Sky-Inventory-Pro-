@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { openFeedbackForm } from '../utils/feedback';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -30,9 +30,15 @@ export const AuthPage: React.FC = () => {
 
   // Forgot password field
   const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotSuccess, setForgotSuccess] = useState<string | null>(null);
 
   // UI state
   const [showPassword, setShowPassword] = useState(false);
+
+  // Clear states when mode changes
+  useEffect(() => {
+    setForgotSuccess(null);
+  }, [mode]);
   const [registeredEmail, setRegisteredEmail] = useState('');
 
   // Password validation state
@@ -90,11 +96,20 @@ export const AuthPage: React.FC = () => {
   const handleForgotSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!forgotEmail) return;
+    setForgotSuccess(null);
+
+    // Client-side validation of email format before checking
+    const trimmedEmail = forgotEmail.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      return; // Will be handled by the form validator or can throw custom error if needed.
+    }
+
     try {
-      await forgotPassword(forgotEmail.trim());
-      setMode('login');
-    } catch (err) {
-      // Handled
+      await forgotPassword(trimmedEmail);
+      setForgotSuccess("Password reset link has been sent successfully. Please check your inbox and spam folder.");
+    } catch (err: any) {
+      // Error is handled in AuthContext and rendered inline
     }
   };
 
@@ -564,8 +579,16 @@ export const AuthPage: React.FC = () => {
                     />
                   </div>
 
+                  {/* Success display */}
+                  {forgotSuccess && (
+                    <div className="p-3 bg-emerald-50/50 dark:bg-emerald-950/10 border border-emerald-200 dark:border-emerald-900/30 rounded-xl flex gap-2 text-xs text-emerald-600 dark:text-emerald-400">
+                      <CheckCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                      <span>{forgotSuccess}</span>
+                    </div>
+                  )}
+
                   {/* Error display */}
-                  {error && (
+                  {error && !forgotSuccess && (
                     <div className="p-3 bg-rose-50/50 dark:bg-rose-950/10 border border-rose-200 dark:border-rose-900/30 rounded-xl flex gap-2 text-xs text-rose-600">
                       <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
                       <span>{error}</span>

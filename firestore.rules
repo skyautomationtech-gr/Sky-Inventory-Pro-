@@ -165,6 +165,13 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // Rules for "audit_logs" collection (Immutable audit logs, allow creation by signed-in users, restrict reading to administrative roles)
+    match /audit_logs/{logId} {
+      allow get, list: if isSignedIn() && hasAdministrativeRole();
+      allow create: if isSignedIn();
+      allow update, delete: if false;
+    }
+
     // Rules for "system_stats" collection
     match /system_stats/{statId} {
       allow get, list: if isSignedIn();
