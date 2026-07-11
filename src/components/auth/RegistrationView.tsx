@@ -5,7 +5,7 @@ import {
   Upload, Shield, FileText, Lock, CheckCircle, ArrowRight, 
   ArrowLeft, Loader2, Sparkles, AlertCircle, Building2, Download, Star
 } from 'lucide-react';
-import { collection, doc, setDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { sendAutomatedEmail } from '../../utils/emailService';
@@ -128,6 +128,42 @@ export const RegistrationView: React.FC<RegistrationViewProps> = ({ onReturnToLo
 
     setLoading(true);
     try {
+      // Check duplicate email in registration_requests
+      const qEmailReq = query(collection(db, 'registration_requests'), where('email', '==', email.trim()));
+      const snapEmailReq = await getDocs(qEmailReq);
+      if (!snapEmailReq.empty) {
+        showNotification('A registration request with this email already exists.', 'error');
+        setLoading(false);
+        return;
+      }
+
+      // Check duplicate email in users
+      const qEmailUser = query(collection(db, 'users'), where('email', '==', email.trim()));
+      const snapEmailUser = await getDocs(qEmailUser);
+      if (!snapEmailUser.empty) {
+        showNotification('This email is already registered to an active user account.', 'error');
+        setLoading(false);
+        return;
+      }
+
+      // Check duplicate phone in registration_requests
+      const qPhoneReq = query(collection(db, 'registration_requests'), where('phoneNumber', '==', phone.trim()));
+      const snapPhoneReq = await getDocs(qPhoneReq);
+      if (!snapPhoneReq.empty) {
+        showNotification('A registration request with this phone number already exists.', 'error');
+        setLoading(false);
+        return;
+      }
+
+      // Check duplicate phone in users
+      const qPhoneUser = query(collection(db, 'users'), where('phoneNumber', '==', phone.trim()));
+      const snapPhoneUser = await getDocs(qPhoneUser);
+      if (!snapPhoneUser.empty) {
+        showNotification('This phone number is already registered to an active user account.', 'error');
+        setLoading(false);
+        return;
+      }
+
       const requestRef = doc(collection(db, 'registration_requests'));
       const newRequest = {
         id: requestRef.id,
