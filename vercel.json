@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/api/auth/check-email-exists",
+      "destination": "/api/auth/check-email-exists.ts"
+    },
+    {
+      "source": "/api/v1/ai/bi-analysis",
+      "destination": "/api/v1/ai/bi-analysis.ts"
+    },
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
+  ]
+}

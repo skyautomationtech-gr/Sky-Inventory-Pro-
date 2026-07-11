@@ -583,26 +583,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       // 2. Query secure backend API for user existence and server-side logging
-      const checkResponse = await fetch('/api/auth/check-email-exists', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: trimmedEmail,
-          clientDetails: {
-            ipAddress,
-            device,
-            browser,
-            location
-          }
-        })
-      });
-
-      if (!checkResponse.ok) {
-        const errData = await checkResponse.json();
-        throw new Error(errData.error || 'Failed to verify account status.');
+      let checkResponse;
+      try {
+        checkResponse = await fetch('/api/auth/check-email-exists', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: trimmedEmail,
+            clientDetails: {
+              ipAddress,
+              device,
+              browser,
+              location
+            }
+          })
+        });
+      } catch (networkErr) {
+        throw new Error('Connection failed. Please check your network and try again.');
       }
 
-      const { exists } = await checkResponse.json();
+      const contentType = checkResponse.headers.get('content-type') || '';
+      let exists = false;
+      let apiErrorMsg = '';
+
+      if (contentType.includes('application/json')) {
+        try {
+          const resData = await checkResponse.json();
+          if (!checkResponse.ok) {
+            apiErrorMsg = resData.error || 'Failed to verify account status.';
+          } else {
+            exists = resData.exists;
+          }
+        } catch (jsonErr) {
+          throw new Error('Received an invalid response format from the server.');
+        }
+      } else {
+        console.warn('Backend endpoint returned a non-JSON response:', contentType);
+        if (checkResponse.status === 404) {
+          throw new Error('The secure verification service endpoint could not be found.');
+        } else {
+          throw new Error(`Server returned an unexpected error (Status ${checkResponse.status}).`);
+        }
+      }
+
+      if (apiErrorMsg) {
+        throw new Error(apiErrorMsg);
+      }
 
       if (!exists) {
         throw new Error('No account found with this email address.');
