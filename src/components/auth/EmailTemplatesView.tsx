@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import { Mail, Check, X, ArrowLeft, Send, Copy, AlertCircle, Calendar, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Mail, Check, X, ArrowLeft, Send, Copy, AlertCircle, Calendar, Sparkles, Database, Save, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import emailjs from '@emailjs/browser';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from '../../firebase';
 
 export const EmailTemplatesView: React.FC = () => {
   const { showNotification } = useAuth();
@@ -9,18 +11,74 @@ export const EmailTemplatesView: React.FC = () => {
   const [testEmail, setTestEmail] = useState('you@skyautomationtech.com');
   const [sendingTest, setSendingTest] = useState(false);
 
-  const serviceId = (import.meta as any).env.VITE_EMAILJS_SERVICE_ID;
-  const templateId = (import.meta as any).env.VITE_EMAILJS_TEMPLATE_ID;
-  const publicKey = (import.meta as any).env.VITE_EMAILJS_PUBLIC_KEY;
-  const isEmailJSConfigured = !!(serviceId && templateId && publicKey);
+  // Firestore DB configuration state
+  const [dbServiceId, setDbServiceId] = useState('');
+  const [dbTemplateId, setDbTemplateId] = useState('');
+  const [dbPublicKey, setDbPublicKey] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [loadingConfig, setLoadingConfig] = useState(true);
+
+  const cleanKey = (val: any) => {
+    if (!val || typeof val !== 'string') return '';
+    return val.replace(/^["']|["']$/g, '').trim();
+  };
+
+  const envServiceId = cleanKey((import.meta as any).env.VITE_EMAILJS_SERVICE_ID);
+  const envTemplateId = cleanKey((import.meta as any).env.VITE_EMAILJS_TEMPLATE_ID);
+  const envPublicKey = cleanKey((import.meta as any).env.VITE_EMAILJS_PUBLIC_KEY);
+
+  // Active configurations: Environment takes precedence, Firestore acts as backup, with working system fallbacks
+  const activeServiceId = cleanKey(envServiceId || dbServiceId || 'service_sat_erpgz');
+  const activeTemplateId = cleanKey(envTemplateId || dbTemplateId || 'template_jrdxwoc');
+  const activePublicKey = cleanKey(envPublicKey || dbPublicKey || '9sc_p6Sj4qHSXc_Va');
+  const isEmailJSConfigured = !!(activeServiceId && activeTemplateId && activePublicKey);
+
+  // Load from Firestore
+  useEffect(() => {
+    const fetchDbSettings = async () => {
+      try {
+        const settingsDoc = await getDoc(doc(db, 'integration_settings', 'emailjs'));
+        if (settingsDoc.exists()) {
+          const data = settingsDoc.data();
+          setDbServiceId(data.serviceId || '');
+          setDbTemplateId(data.templateId || '');
+          setDbPublicKey(data.publicKey || '');
+        }
+      } catch (err) {
+        console.error('Failed to load EmailJS settings from Firestore:', err);
+      } finally {
+        setLoadingConfig(false);
+      }
+    };
+    fetchDbSettings();
+  }, []);
+
+  const handleSaveDbSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      await setDoc(doc(db, 'integration_settings', 'emailjs'), {
+        serviceId: dbServiceId.trim(),
+        templateId: dbTemplateId.trim(),
+        publicKey: dbPublicKey.trim(),
+        updatedAt: new Date().toISOString()
+      });
+      showNotification('EmailJS credentials synchronized to database successfully!', 'success');
+    } catch (err: any) {
+      console.error('Error saving EmailJS settings to database:', err);
+      showNotification('Failed to synchronize credentials: ' + err.message, 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handleSendTest = async () => {
     setSendingTest(true);
     if (isEmailJSConfigured) {
       try {
         await emailjs.send(
-          serviceId!,
-          templateId!,
+          activeServiceId!,
+          activeTemplateId!,
           {
             to_email: testEmail,
             email_to: testEmail,
@@ -28,7 +86,7 @@ export const EmailTemplatesView: React.FC = () => {
             message_html: templates[activeTemplate].body,
             message: templates[activeTemplate].body.replace(/<[^>]*>/g, ''), // Plain text version fallback
           },
-          publicKey!
+          activePublicKey!
         );
         showNotification(`Real test email successfully dispatched via EmailJS to ${testEmail}!`, 'success');
       } catch (err: any) {
@@ -257,16 +315,16 @@ export const EmailTemplatesView: React.FC = () => {
       </div>
 
       {/* EmailJS Status & Connection Guide */}
-      <div className={`p-4 rounded-2xl border backdrop-blur-xl transition-all ${
+      <div className={`p-5 rounded-2xl border backdrop-blur-xl transition-all space-y-4 ${
         isEmailJSConfigured 
-          ? 'bg-emerald-950/25 border-emerald-500/20 text-emerald-300' 
-          : 'bg-amber-950/20 border-amber-500/10 text-amber-300/90'
+          ? 'bg-[#10b981]/5 border-[#10b981]/20 text-[#10b981]' 
+          : 'bg-[#f59e0b]/5 border-[#f59e0b]/15 text-[#f59e0b]/90'
       }`}>
         <div className="flex items-start gap-3">
           <div className={`p-2 rounded-xl border ${
             isEmailJSConfigured 
-              ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
-              : 'bg-amber-500/10 border-amber-500/20 text-amber-400'
+              ? 'bg-[#10b981]/10 border-[#10b981]/20 text-[#10b981]' 
+              : 'bg-[#f59e0b]/10 border-[#f59e0b]/20 text-[#f59e0b]'
           }`}>
             <Sparkles className="h-4 w-4 animate-pulse" />
           </div>
@@ -276,11 +334,79 @@ export const EmailTemplatesView: React.FC = () => {
             </h4>
             <p className="text-[11px] text-slate-400 leading-relaxed">
               {isEmailJSConfigured 
-                ? 'Your EmailJS credentials have been detected! Test notifications will be sent directly to actual email addresses.' 
-                : 'Configure your EmailJS keys in your environment settings (VITE_EMAILJS_SERVICE_ID, VITE_EMAILJS_TEMPLATE_ID, and VITE_EMAILJS_PUBLIC_KEY) to activate live email dispatch. Currently running in safe mock simulation mode.'}
+                ? 'Your EmailJS credentials have been detected! Notifications will be dispatched directly to actual email addresses.' 
+                : 'Configure your EmailJS keys inside this panel or via system variables to activate live email dispatch. Currently running in safe mock simulation mode.'}
             </p>
           </div>
         </div>
+
+        {/* Database Credentials Sync Form */}
+        <form onSubmit={handleSaveDbSettings} className="p-4 bg-[#050816]/60 rounded-xl border border-white/5 space-y-3">
+          <div className="flex items-center justify-between pb-1.5 border-b border-white/5">
+            <div className="flex items-center gap-2">
+              <Database className="h-3.5 w-3.5 text-blue-400" />
+              <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider font-mono">
+                EmailJS API Credentials Manager (Sync to Firestore)
+              </span>
+            </div>
+            {isEmailJSConfigured && (
+              <span className="text-[9px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">
+                Active
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="space-y-1">
+              <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">VITE_EMAILJS_SERVICE_ID</label>
+              <input
+                type="text"
+                value={dbServiceId}
+                onChange={(e) => setDbServiceId(e.target.value)}
+                placeholder={envServiceId ? 'Using env variable...' : 'e.g. service_xxxxxxx'}
+                disabled={!!envServiceId}
+                className="w-full text-xs bg-[#0f172a]/80 border border-white/10 rounded-lg px-3 py-1.5 text-white placeholder-slate-600 focus:outline-hidden focus:border-blue-500 disabled:opacity-40 font-mono"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">VITE_EMAILJS_TEMPLATE_ID</label>
+              <input
+                type="text"
+                value={dbTemplateId}
+                onChange={(e) => setDbTemplateId(e.target.value)}
+                placeholder={envTemplateId ? 'Using env variable...' : 'e.g. template_xxxxxxx'}
+                disabled={!!envTemplateId}
+                className="w-full text-xs bg-[#0f172a]/80 border border-white/10 rounded-lg px-3 py-1.5 text-white placeholder-slate-600 focus:outline-hidden focus:border-blue-500 disabled:opacity-40 font-mono"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">VITE_EMAILJS_PUBLIC_KEY</label>
+              <input
+                type="text"
+                value={dbPublicKey}
+                onChange={(e) => setDbPublicKey(e.target.value)}
+                placeholder={envPublicKey ? 'Using env variable...' : 'e.g. user_xxxxxxxxxxxxxxxx'}
+                disabled={!!envPublicKey}
+                className="w-full text-xs bg-[#0f172a]/80 border border-white/10 rounded-lg px-3 py-1.5 text-white placeholder-slate-600 focus:outline-hidden focus:border-blue-500 disabled:opacity-40 font-mono"
+              />
+            </div>
+          </div>
+
+          {!envServiceId && (
+            <div className="flex justify-end pt-1">
+              <button
+                type="submit"
+                disabled={isSaving}
+                className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-md shadow-blue-500/5"
+              >
+                {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+                <span>Sync to Database</span>
+              </button>
+            </div>
+          )}
+        </form>
       </div>
 
       {/* Frame Preview box */}

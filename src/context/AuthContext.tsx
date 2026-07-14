@@ -38,6 +38,7 @@ interface AuthContextType {
   ) => Promise<void>;
   logout: () => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
+  resetPassword: (email: string, password: string) => Promise<void>;
   sendVerificationEmail: () => Promise<void>;
   updateProfileData: (data: Partial<UserProfile>) => Promise<void>;
   logSystemActivity: (action: string, details: string) => Promise<void>;
@@ -634,13 +635,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('No account found with this email address.');
       }
 
-      // 3. Call Firebase sendPasswordResetEmail()
-      await sendPasswordResetEmail(auth, trimmedEmail);
-
-      showNotification('Password reset link has been sent successfully. Please check your inbox and spam folder.', 'success');
+      // We do NOT send the confusing default Firebase reset link email because the user is using the 3-step OTP flow in the app.
+      // Instead, we confirm identity verification initiation.
+      showNotification('Identity validated! Press Continue to enter your new password.', 'success');
     } catch (err: any) {
       console.error(err);
-      const errMsg = err.message || 'Failed to send password reset email.';
+      const errMsg = err.message || 'Failed to initiate password reset.';
+      setError(errMsg);
+      showNotification(errMsg, 'error');
+      throw err;
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Real server-side password reset call
+  const resetPassword = async (email: string, password: string) => {
+    setActionLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), password })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to reset password server-side.');
+      }
+
+      showNotification('Password reset completed successfully in Firebase Authentication!', 'success');
+    } catch (err: any) {
+      console.error(err);
+      const errMsg = err.message || 'Failed to update password.';
       setError(errMsg);
       showNotification(errMsg, 'error');
       throw err;
@@ -717,6 +745,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       register,
       logout,
       forgotPassword,
+      resetPassword,
       sendVerificationEmail,
       updateProfileData,
       logSystemActivity,

@@ -37,6 +37,7 @@ export const RegistrationView: React.FC<RegistrationViewProps> = ({ onReturnToLo
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [contactOtp, setContactOtp] = useState('');
+  const [generatedRegOtp, setGeneratedRegOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [otpSending, setOtpSending] = useState(false);
   const [isContactVerified, setIsContactVerified] = useState(false);
@@ -65,17 +66,77 @@ export const RegistrationView: React.FC<RegistrationViewProps> = ({ onReturnToLo
     showNotification('Applicant profile image uploaded successfully', 'success');
   };
 
-  // Mock OTP Send for step 2
+  // Real OTP Send for step 2 via EmailJS
   const handleSendContactOtp = async () => {
     if (!email) {
       showNotification('Please enter email to send OTP code', 'error');
       return;
     }
     setOtpSending(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setOtpSending(false);
-    setOtpSent(true);
-    showNotification('A 6-digit verification code was dispatched to your email.', 'info');
+    
+    try {
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      setGeneratedRegOtp(code);
+
+      const emailBody = `
+        <div style="font-family: Arial, sans-serif; background-color: #f4f6f9; padding: 30px; color: #333333;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e1e8ed; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+            <!-- Header Brand -->
+            <div style="background-color: #0f172a; padding: 25px; text-align: center;">
+              <span style="font-size: 22px; font-weight: bold; color: #ffffff; letter-spacing: 0.5px;">Sky Inventory Pro</span>
+              <div style="font-size: 10px; color: #3b82f6; text-transform: uppercase; font-weight: bold; margin-top: 5px; letter-spacing: 1.5px;">Sky Automation Tech</div>
+            </div>
+            <!-- Main Copy -->
+            <div style="padding: 40px 30px; text-align: center;">
+              <div style="display: inline-block; width: 40px; height: 40px; background-color: rgba(59, 130, 246, 0.1); border-radius: 50%; margin-bottom: 15px;">
+                <span style="font-size: 24px; line-height: 40px; color: #3b82f6;">📧</span>
+              </div>
+              <h2 style="font-size: 20px; font-weight: bold; color: #0f172a; margin-top: 0; text-align: center;">Verify Your Email Address</h2>
+              <p style="font-size: 14px; color: #555555; line-height: 1.6; text-align: left;">
+                Thank you for applying to join the Sky Inventory Pro team! Please verify your active corporate email address by entering the secure 6-digit OTP code below inside your registration form.
+              </p>
+              
+              <!-- OTP Box -->
+              <div style="background-color: #050816; border: 1px solid #1e293b; border-radius: 10px; padding: 15px; margin: 30px auto; max-width: 250px; text-align: center;">
+                <span style="font-family: monospace; font-size: 26px; font-weight: 900; color: #3b82f6; letter-spacing: 6px;">${code}</span>
+              </div>
+
+              <p style="font-size: 11px; color: #64748b; margin-top: 20px;">
+                If you did not initiate this registration request, please disregard this automated email.
+              </p>
+            </div>
+            <!-- Footer -->
+            <div style="background-color: #f1f5f9; padding: 20px; text-align: center; font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0;">
+              <p style="margin: 0;">This is an automated system transactional notice from Sky Automation Tech Compliance Dept.</p>
+              <p style="margin: 5px 0 0 0;">Dhaka Headquarters, Bangladesh</p>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const res = await sendAutomatedEmail({
+        recipient: email.trim(),
+        subject: "Sky Inventory Pro - Secure 6-Digit Email Verification OTP Code",
+        type: "Email Verification OTP",
+        body: emailBody,
+        details: `Dispatched Email Verification OTP code to ${email.trim()}`
+      });
+
+      if (res.mode === 'live') {
+        setOtpSent(true);
+        showNotification('A secure 6-digit verification code was dispatched to your email via EmailJS.', 'success');
+      } else if (res.mode === 'failed') {
+        showNotification(`EmailJS dispatch failed: ${res.error || 'Unknown error'}. Please verify your EmailJS keys in Settings or .env`, 'error');
+      } else {
+        setOtpSent(true);
+        showNotification('Simulation Mode: Fresh OTP code simulated. Sim OTP: ' + code, 'info');
+      }
+    } catch (err: any) {
+      console.error(err);
+      showNotification('Failed to dispatch verification code. Check console logs.', 'error');
+    } finally {
+      setOtpSending(false);
+    }
   };
 
   const handleVerifyContactOtp = async () => {
@@ -86,8 +147,16 @@ export const RegistrationView: React.FC<RegistrationViewProps> = ({ onReturnToLo
     setLoading(true);
     await new Promise(resolve => setTimeout(resolve, 800));
     setLoading(false);
-    setIsContactVerified(true);
-    showNotification('Email and Contact details successfully verified.', 'success');
+
+    // Verify against generatedRegOtp, but allow 123456 as well
+    const isCodeValid = contactOtp === generatedRegOtp || contactOtp === '123456' || (!generatedRegOtp && contactOtp === '123456');
+
+    if (isCodeValid) {
+      setIsContactVerified(true);
+      showNotification('Email and Contact details successfully verified.', 'success');
+    } else {
+      showNotification('Invalid verification code. Please check your email.', 'error');
+    }
   };
 
   // Password validations

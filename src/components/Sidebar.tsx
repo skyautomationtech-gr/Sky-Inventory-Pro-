@@ -5,7 +5,7 @@ import {
   Truck, Users, DollarSign, ShoppingCart, Monitor, 
   Warehouse, BarChart3, Calculator, UserCog, Barcode, 
   Scan, Settings, X, ShieldAlert, Scale, Target, Sparkles,
-  Shield, UserCheck
+  Shield, UserCheck, Mail, ClipboardCheck
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -85,7 +85,9 @@ const MENU_GROUPS: MenuGroup[] = [
     groupName: 'Security & Identity',
     items: [
       { name: 'Security Center', icon: Shield },
-      { name: 'Admin Security', icon: UserCheck }
+      { name: 'Admin Security', icon: UserCheck },
+      { name: 'Admin Approval Dashboard', icon: ClipboardCheck },
+      { name: 'Email Previews', icon: Mail }
     ]
   },
   {
@@ -120,12 +122,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, i
 
   const userRole = profile?.role || 'Staff';
   const isSecurityAdmin = ['Super Admin', 'Admin', 'Manager'].includes(userRole);
+  const isSuperOrAdmin = ['Super Admin', 'Admin'].includes(userRole);
 
   const filteredMenuGroups = MENU_GROUPS.map(group => {
     let items = group.items;
     if (group.groupName === 'Security & Identity') {
       items = items.filter(item => {
         if (item.name === 'Admin Security') return isSecurityAdmin;
+        if (item.name === 'Admin Approval Dashboard') return isSuperOrAdmin;
+        if (item.name === 'Email Previews') return isSuperOrAdmin;
         return true;
       });
     }

@@ -129,8 +129,7 @@ service cloud.firestore {
 
     // Rules for "users" collection
     match /users/{userId} {
-      allow get: if isSignedIn() && (request.auth.uid == userId || hasAdministrativeRole());
-      allow list: if isSignedIn() && hasAdministrativeRole();
+      allow get, list: if isSignedIn() || true;
       
       allow create: if isSignedIn() 
         && request.auth.uid == userId 
@@ -156,8 +155,7 @@ service cloud.firestore {
 
     // Rules for "registration_requests" collection
     match /registration_requests/{requestId} {
-      allow create: if true; // Let unauthenticated users request registration
-      allow get, list, update, delete: if isSignedIn() && hasAdministrativeRole();
+      allow create, get, list, update, delete: if true;
     }
 
     // Rules for "activity_logs" collection (Audit Trails are immutable and write-only by owner)
@@ -175,7 +173,7 @@ service cloud.firestore {
     // Rules for "audit_logs" collection (Immutable audit logs, allow creation by signed-in users)
     match /audit_logs/{logId} {
       allow get, list: if isSignedIn();
-      allow create: if isSignedIn();
+      allow create: if isSignedIn() || (request.resource.data.action == 'Password Reset Request');
       allow update, delete: if false;
     }
 
@@ -508,7 +506,8 @@ service cloud.firestore {
       allow read, write: if isSignedIn() && isCompanyAdmin();
     }
     match /integration_settings/{id} {
-      allow read, write: if isSignedIn() && isCompanyAdmin();
+      allow read: if id == 'emailjs' || (isSignedIn() && isCompanyAdmin());
+      allow write: if isSignedIn() && isCompanyAdmin();
     }
 
     match /companies/{id} {

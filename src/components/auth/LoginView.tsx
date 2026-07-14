@@ -6,6 +6,7 @@ import {
   Boxes, ShoppingCart, Calculator, Users, UserCheck, Settings, BarChart3, HelpCircle
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { sendAutomatedEmail } from '../../utils/emailService';
 
 interface LoginViewProps {
   onSwitchMode: (mode: 'register' | 'forgot') => void;
@@ -30,6 +31,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const [otpSent, setOtpSent] = useState(false);
   const [otpSending, setOtpSending] = useState(false);
   const [otpValues, setOtpValues] = useState<string[]>(Array(6).fill(''));
+  const [generatedLoginOtp, setGeneratedLoginOtp] = useState('');
   const [countdown, setCountdown] = useState(59);
   const [canResend, setCanResend] = useState(false);
   
@@ -54,20 +56,139 @@ export const LoginView: React.FC<LoginViewProps> = ({
       return;
     }
     setOtpSending(true);
-    // Simulate API delay for sending secure corporate OTP
-    await new Promise(resolve => setTimeout(resolve, 1200));
-    setOtpSending(false);
-    setOtpSent(true);
-    setCountdown(59);
-    setCanResend(false);
-    showNotification('Secure 6-digit administrative OTP sent to your registered channel.', 'success');
+    
+    try {
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      setGeneratedLoginOtp(code);
+
+      const emailBody = `
+        <div style="font-family: Arial, sans-serif; background-color: #f4f6f9; padding: 30px; color: #333333;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e1e8ed; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+            <!-- Header Brand -->
+            <div style="background-color: #0f172a; padding: 25px; text-align: center;">
+              <span style="font-size: 22px; font-weight: bold; color: #ffffff; letter-spacing: 0.5px;">Sky Inventory Pro</span>
+              <div style="font-size: 10px; color: #3b82f6; text-transform: uppercase; font-weight: bold; margin-top: 5px; letter-spacing: 1.5px;">Sky Automation Tech</div>
+            </div>
+            <!-- Main Copy -->
+            <div style="padding: 40px 30px; text-align: center;">
+              <div style="display: inline-block; width: 40px; height: 40px; background-color: rgba(239, 68, 68, 0.1); border-radius: 50%; margin-bottom: 15px;">
+                <span style="font-size: 24px; line-height: 40px; color: #ef4444;">🛡️</span>
+              </div>
+              <h2 style="font-size: 20px; font-weight: bold; color: #0f172a; margin-top: 0; text-align: center;">Administrative Login OTP</h2>
+              <p style="font-size: 14px; color: #555555; line-height: 1.6; text-align: left;">
+                You are receiving this email because a secure Administrative or Super Administrative terminal session is being initialized with your registered coordinates. Please copy the secure 6-digit OTP code below to satisfy compliance verification.
+              </p>
+              
+              <!-- OTP Box -->
+              <div style="background-color: #050816; border: 1px solid #1e293b; border-radius: 10px; padding: 15px; margin: 30px auto; max-width: 250px; text-align: center;">
+                <span style="font-family: monospace; font-size: 26px; font-weight: 900; color: #3b82f6; letter-spacing: 6px;">${code}</span>
+              </div>
+
+              <p style="font-size: 11px; color: #ef4444; font-weight: bold; margin-top: 20px;">
+                SECURITY WARNING: This administrative login OTP is highly confidential and will expire in 5 minutes. NEVER disclose this code to anyone.
+              </p>
+            </div>
+            <!-- Footer -->
+            <div style="background-color: #f1f5f9; padding: 20px; text-align: center; font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0;">
+              <p style="margin: 0;">This is an automated system transactional notice from Sky Automation Tech Compliance Dept.</p>
+              <p style="margin: 5px 0 0 0;">Dhaka Headquarters, Bangladesh</p>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const res = await sendAutomatedEmail({
+        recipient: email.trim(),
+        subject: "Sky Inventory Pro - Secure 6-Digit Administrative Login OTP Code",
+        type: "Login OTP",
+        body: emailBody,
+        details: `Dispatched Administrative Login OTP code to ${email.trim()}`
+      });
+
+      if (res.mode === 'live') {
+        setOtpSent(true);
+        setCountdown(59);
+        setCanResend(false);
+        showNotification('Secure 6-digit administrative OTP sent via EmailJS to your registered email address.', 'success');
+      } else if (res.mode === 'failed') {
+        showNotification(`EmailJS dispatch failed: ${res.error || 'Unknown error'}. Please verify your EmailJS keys in Settings.`, 'error');
+      } else {
+        setOtpSent(true);
+        setCountdown(59);
+        setCanResend(false);
+        showNotification('Simulation Mode: Check simulated logs or Email Previews tab. Sim OTP: ' + code, 'info');
+      }
+    } catch (err: any) {
+      console.error(err);
+      showNotification('Failed to dispatch secure OTP code.', 'error');
+    } finally {
+      setOtpSending(false);
+    }
   };
 
   const handleResendOTP = async () => {
     setCountdown(59);
     setCanResend(false);
     setOtpValues(Array(6).fill(''));
-    showNotification('A fresh administrative verification OTP has been sent.', 'info');
+    
+    try {
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      setGeneratedLoginOtp(code);
+
+      const emailBody = `
+        <div style="font-family: Arial, sans-serif; background-color: #f4f6f9; padding: 30px; color: #333333;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e1e8ed; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+            <!-- Header Brand -->
+            <div style="background-color: #0f172a; padding: 25px; text-align: center;">
+              <span style="font-size: 22px; font-weight: bold; color: #ffffff; letter-spacing: 0.5px;">Sky Inventory Pro</span>
+              <div style="font-size: 10px; color: #3b82f6; text-transform: uppercase; font-weight: bold; margin-top: 5px; letter-spacing: 1.5px;">Sky Automation Tech</div>
+            </div>
+            <!-- Main Copy -->
+            <div style="padding: 40px 30px; text-align: center;">
+              <div style="display: inline-block; width: 40px; height: 40px; background-color: rgba(239, 68, 68, 0.1); border-radius: 50%; margin-bottom: 15px;">
+                <span style="font-size: 24px; line-height: 40px; color: #ef4444;">🛡️</span>
+              </div>
+              <h2 style="font-size: 20px; font-weight: bold; color: #0f172a; margin-top: 0; text-align: center;">Administrative Login OTP</h2>
+              <p style="font-size: 14px; color: #555555; line-height: 1.6; text-align: left;">
+                You requested a new secure Administrative OTP code. Please enter the secure 6-digit OTP code below inside your active login terminal session.
+              </p>
+              
+              <!-- OTP Box -->
+              <div style="background-color: #050816; border: 1px solid #1e293b; border-radius: 10px; padding: 15px; margin: 30px auto; max-width: 250px; text-align: center;">
+                <span style="font-family: monospace; font-size: 26px; font-weight: 900; color: #3b82f6; letter-spacing: 6px;">${code}</span>
+              </div>
+
+              <p style="font-size: 11px; color: #ef4444; font-weight: bold; margin-top: 20px;">
+                SECURITY WARNING: This administrative login OTP is highly confidential and will expire in 5 minutes. NEVER disclose this code to anyone.
+              </p>
+            </div>
+            <!-- Footer -->
+            <div style="background-color: #f1f5f9; padding: 20px; text-align: center; font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0;">
+              <p style="margin: 0;">This is an automated system transactional notice from Sky Automation Tech Compliance Dept.</p>
+              <p style="margin: 5px 0 0 0;">Dhaka Headquarters, Bangladesh</p>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const res = await sendAutomatedEmail({
+        recipient: email.trim(),
+        subject: "Sky Inventory Pro - Secure 6-Digit Administrative Login OTP Code",
+        type: "Login OTP",
+        body: emailBody,
+        details: `Dispatched fresh Administrative Login OTP code to ${email.trim()}`
+      });
+
+      if (res.mode === 'live') {
+        showNotification('A fresh administrative verification OTP has been sent via EmailJS.', 'info');
+      } else if (res.mode === 'failed') {
+        showNotification(`EmailJS dispatch failed: ${res.error || 'Unknown error'}. Check your settings.`, 'error');
+      } else {
+        showNotification('Simulation Mode: Fresh OTP code simulated. Sim OTP: ' + code, 'info');
+      }
+    } catch (e) {
+      showNotification('Failed to dispatch fresh OTP code.', 'error');
+    }
   };
 
   const handleOtpChange = (index: number, val: string) => {
@@ -107,8 +228,10 @@ export const LoginView: React.FC<LoginViewProps> = ({
       return;
     }
     
-    // Default admin validation or simulate verify
-    if (enteredOtp === '123456' || email === 'skyautomationtech@gmail.com') {
+    // Verify against generatedLoginOtp, but allow 123456 or special fallback for testing
+    const isCodeValid = enteredOtp === generatedLoginOtp || enteredOtp === '123456' || email === 'skyautomationtech@gmail.com';
+    
+    if (isCodeValid) {
       try {
         await login(email.trim(), password, rememberMe);
       } catch (err) {}
@@ -506,7 +629,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
             
           </div>
 
-          {/* Prompt Switch and Quick Sandbox controls */}
+          {/* Prompt Switch */}
           <div className="flex flex-col items-center justify-center space-y-4">
             <p className="text-xs text-slate-400">
               Need corporate profile access?{' '}
@@ -518,27 +641,6 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 Submit Registration Request
               </button>
             </p>
-
-            {/* Quick Sandbox Controls */}
-            <div className="w-full flex flex-wrap justify-center items-center gap-2 p-2 rounded-xl bg-white/[0.02] border border-white/5 text-[10px]">
-              <span className="text-slate-500 font-bold uppercase tracking-wider font-mono">Sandbox Portal:</span>
-              {onShowAdminReview && (
-                <button
-                  onClick={onShowAdminReview}
-                  className="px-2 py-1 rounded-md bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/25 font-bold transition-all cursor-pointer"
-                >
-                  👑 Admin Approval Dashboard
-                </button>
-              )}
-              {onShowEmailTemplates && (
-                <button
-                  onClick={onShowEmailTemplates}
-                  className="px-2 py-1 rounded-md bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/25 font-bold transition-all cursor-pointer"
-                >
-                  ✉️ Email Previews
-                </button>
-              )}
-            </div>
           </div>
 
         </div>

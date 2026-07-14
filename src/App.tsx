@@ -29,6 +29,8 @@ import { EnterpriseAdministration } from './components/enterprise/EnterpriseAdmi
 import { AIDashboard } from './components/enterprise/AIDashboard';
 import { SecurityCenter } from './components/auth/SecurityCenter';
 import { AdminSecurity } from './components/auth/AdminSecurity';
+import { AdminReviewView } from './components/auth/AdminReviewView';
+import { EmailTemplatesView } from './components/auth/EmailTemplatesView';
 import { Loader2, AlertTriangle, Mail } from 'lucide-react';
 import { testConnection } from './firebase';
 
@@ -223,6 +225,14 @@ const AppContent: React.FC = () => {
               <AdminSecurity />
             )}
 
+            {currentView === 'Admin Approval Dashboard' && (
+              <AdminReviewView />
+            )}
+
+            {currentView === 'Email Previews' && (
+              <EmailTemplatesView />
+            )}
+
             {currentView !== 'Dashboard' && 
              currentView !== 'Profile' && 
              currentView !== 'Products' && 
@@ -243,7 +253,9 @@ const AppContent: React.FC = () => {
              currentView !== 'Enterprise Admin' && 
              currentView !== 'AI BI Analytics' && 
              currentView !== 'Security Center' && 
-             currentView !== 'Admin Security' && (
+             currentView !== 'Admin Security' && 
+             currentView !== 'Admin Approval Dashboard' && 
+             currentView !== 'Email Previews' && (
               <ComingSoon moduleName={currentView} />
             )}
 
